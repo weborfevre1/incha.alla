@@ -10,6 +10,10 @@ const packagesRoot = path.resolve(__dirname, "..", "..", "packages");
 const workspaceRoot = path.resolve(__dirname, "..", "..");
 const adminPrefix = "/admin";
 
+function toViteFsPath(filePath: string) {
+  return `/@fs/${normalizePath(filePath)}`;
+}
+
 function getContentType(filePath: string) {
   const extension = path.extname(filePath).toLowerCase();
 
@@ -57,6 +61,11 @@ function prefixAdminAssetUrls(html: string) {
     .replace(/(src|href)=("|')\/(?!admin\/|@vite\/|@fs\/)([^"'#?]+)("|')/g, (_match, attribute, quoteStart, assetPath, quoteEnd) => {
       if (assetPath === "header.html" || assetPath === "footer.html") {
         return `${attribute}=${quoteStart}/${assetPath}${quoteEnd}`;
+      }
+
+      if (assetPath.startsWith("src/")) {
+        const absoluteAssetPath = path.resolve(adminRoot, assetPath);
+        return `${attribute}=${quoteStart}${toViteFsPath(absoluteAssetPath)}${quoteEnd}`;
       }
 
       return `${attribute}=${quoteStart}${adminPrefix}/${assetPath}${quoteEnd}`;

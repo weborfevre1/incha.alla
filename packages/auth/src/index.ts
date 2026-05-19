@@ -19,7 +19,6 @@ import type {
   UserRole,
   ApiResponse,
   SupabaseUser,
-  SupabaseProfile,
 } from '@siggistore/shared-types';
 
 // ===== AUTH STATE RESOLUTION =====
@@ -51,7 +50,7 @@ export async function resolveAuthState(sessionOverride?: any): Promise<UnifiedAu
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role, email, first_name, last_name, avatar_url')
-    .eq('id', session.user.id)
+    .eq('user_id', session.user.id)
     .maybeSingle();
 
   if (error) {
@@ -63,8 +62,6 @@ export async function resolveAuthState(sessionOverride?: any): Promise<UnifiedAu
       user: mapUser(session.user, null),
     };
   }
-
-  const userRole = (profile?.role as UserRole) || 'customer';
 
   return {
     status: 'authenticated',

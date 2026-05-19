@@ -2016,27 +2016,11 @@
   }
 
   function ensureLoggedOutCard(accountDropdown) {
-    let loggedOutView = accountDropdown.querySelector(".auth-logged-out");
-    if (loggedOutView) return loggedOutView;
-
-    loggedOutView = document.createElement("div");
-    loggedOutView.className = "auth-logged-out i0yn8 hidden";
-    loggedOutView.innerHTML = [
-      '<div class="zorzx nck10 edpyz">',
-      '<div class="a3olr rm4xc"><span class="block at2zb c4t4j">Account</span></div>',
-      '<a class="abuy9 aimp4 w-full inline-flex lp3ls items-center my9gz yymkp at2zb edpyz pm6ks mak94 ve4ck bni17 pucrg focus:outline-hidden soa63" href="./Login.html">Log in</a>',
-      '<p class="ljp3z rm4xc yymkp f1ztf">Don\'t have an account? <a class="text-[13px] f1ztf carpj a8v2i bz0ic focus:outline-hidden ti70c" href="./Create Account.html">Register</a></p>',
-      "</div>",
-    ].join("");
-
-    const loggedInView = accountDropdown.querySelector(".auth-logged-in") || accountDropdown.firstElementChild;
-    if (loggedInView) {
-      loggedInView.insertAdjacentElement("afterend", loggedOutView);
-    } else {
-      accountDropdown.appendChild(loggedOutView);
+    const loggedOutView = accountDropdown.querySelector(".auth-logged-out");
+    if (loggedOutView) {
+      loggedOutView.remove();
     }
-
-    return loggedOutView;
+    return null;
   }
 
   function bindLogoutButton(button, onLoggedOut) {
@@ -2207,6 +2191,7 @@
     if (!accountDropdown) return;
 
     const loggedInView = accountDropdown.querySelector(".auth-logged-in") || accountDropdown.querySelector(":scope > .ltybu");
+    const accountRoot = accountDropdown.closest(".hs-dropdown");
     const loggedOutView = ensureLoggedOutCard(accountDropdown);
     const accountName = accountDropdown.querySelector(".auth-user-name");
     const accountEmail = accountDropdown.querySelector(".auth-user-email");
@@ -2215,6 +2200,13 @@
     const avatarFallback = document.querySelector(".auth-avatar-fallback");
 
     const setAuthView = function (isLoggedIn) {
+      if (accountRoot) {
+        if (isLoggedIn) {
+          accountRoot.removeAttribute("data-storefront-hidden");
+        } else {
+          accountRoot.setAttribute("data-storefront-hidden", "true");
+        }
+      }
       if (loggedInView) loggedInView.classList.toggle("hidden", !isLoggedIn);
       if (loggedOutView) loggedOutView.classList.toggle("hidden", isLoggedIn);
       avatarImages.forEach(function (image) {

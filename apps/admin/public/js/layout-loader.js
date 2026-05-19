@@ -4,6 +4,7 @@
   const STOREFRONT_HEADER_PATH = "/header.html";
   const SHARED_FOOTER_PATH = "/footer.html";
   const HEADER_STANDARDIZER_SRC = "/admin/js/header-standardizer.js";
+  const ADMIN_SHARED_HEADER_STYLE_ID = "admin-shared-header-spacing";
 
   function getTopLevelSection(tagName) {
     return Array.from(document.body.children).find(
@@ -36,6 +37,21 @@
     document.body.appendChild(script);
   }
 
+  function ensureAdminSharedHeaderSpacing() {
+    if (document.getElementById(ADMIN_SHARED_HEADER_STYLE_ID)) {
+      return;
+    }
+
+    const style = document.createElement("style");
+    style.id = ADMIN_SHARED_HEADER_STYLE_ID;
+    style.textContent = `
+      #${SHARED_HEADER_ID} {
+        margin-top: 0.75rem;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   async function loadSharedLayout() {
     const existingSharedHeader = document.getElementById(SHARED_HEADER_ID);
     const existingSharedFooter = document.getElementById(SHARED_FOOTER_ID);
@@ -60,6 +76,7 @@
 
     if (headerSource) {
       headerSource.id = SHARED_HEADER_ID;
+      ensureAdminSharedHeaderSpacing();
 
       if (existingSharedHeader) {
         existingSharedHeader.replaceWith(headerSource);

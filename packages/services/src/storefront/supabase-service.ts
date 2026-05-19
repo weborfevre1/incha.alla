@@ -11,7 +11,6 @@ import type {
   SupabaseProfile,
   SupabaseOrder,
   ApiResponse,
-  AuthUser,
 } from '@siggistore/shared-types';
 
 const supabase = getSupabase();
@@ -36,11 +35,10 @@ export const supabaseAuthService = {
   async signIn(email: string, password: string): Promise<ApiResponse<SupabaseUser>> {
     const result = await signIn(email, password);
     if (result.success && result.data) {
-      // Get the actual Supabase user after sign in
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: sessionData } = await supabase.auth.getSession();
       return {
         success: true,
-        data: (userData.user as SupabaseUser) || (result.data as unknown as SupabaseUser),
+        data: (sessionData.session?.user as SupabaseUser) || (result.data as unknown as SupabaseUser),
       };
     }
     return { success: false, error: result.error };
@@ -52,8 +50,8 @@ export const supabaseAuthService = {
 
   async getCurrentUser(): Promise<SupabaseUser | null> {
     try {
-      const { data } = await supabase.auth.getUser();
-      return (data.user as SupabaseUser) || null;
+      const { data } = await supabase.auth.getSession();
+      return (data.session?.user as SupabaseUser) || null;
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;

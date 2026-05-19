@@ -89,7 +89,6 @@ D:\inchallah
 |-- .gitignore
 |-- README.md
 |-- TREE.md
-|-- package-lock.json
 |-- package.json
 |-- pnpm-lock.yaml
 |-- pnpm-workspace.yaml
@@ -126,4 +125,4 @@ D:\inchallah
 
 - Workspace packages are declared in `pnpm-workspace.yaml`
 - Root orchestration uses Turbo via `build`, `dev`, `type-check`, and `lint`
-- The repo currently contains both `pnpm-lock.yaml` and `package-lock.json`
+- The repo uses `pnpm-lock.yaml` as the single workspace lockfile
