@@ -11,10 +11,7 @@ const grid = document.getElementById("product-listing-grid");
 const countNode = document.getElementById("product-listing-count");
 const params = new URLSearchParams(window.location.search);
 const categorySlug = params.get("category");
-const listingLimit = 10;
-const promoCards = grid
-  ? Array.from(grid.querySelectorAll("a.block.relative.nm4j1.ictpa")).map((node) => node.outerHTML)
-  : [];
+const listingLimit = 100;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -139,24 +136,10 @@ function buildProductCardMarkup(product, index) {
 function renderEmptyProducts(message) {
   if (!grid) return;
   grid.innerHTML = `
-    ${promoCards[0] || ""}
     <div class="cti9j yymkp f1ztf c4t4j">
       ${escapeHtml(message)}
     </div>
-    ${promoCards[1] || ""}
   `;
-}
-
-function composeListingGridMarkup(products) {
-  const cards = products.map(buildProductCardMarkup);
-  const splitIndex = Math.ceil(cards.length / 2);
-
-  return [
-    promoCards[0] || "",
-    ...cards.slice(0, splitIndex),
-    promoCards[1] || "",
-    ...cards.slice(splitIndex),
-  ].join("");
 }
 
 function applyCategoryCards(categories) {
@@ -194,7 +177,7 @@ function applyProductCards(products, totalCount) {
     return;
   }
 
-  grid.innerHTML = composeListingGridMarkup(products);
+  grid.innerHTML = products.map(buildProductCardMarkup).join("");
 
   if (countNode) {
     const displayedCount =
