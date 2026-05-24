@@ -69,10 +69,11 @@ function getOrderDisplayNumber(order) {
 
 function statusMeta(rawStatus) {
   const status = String(rawStatus ?? "pending").toLowerCase();
+  const label = titleCase(status);
 
   if (["paid", "processing", "shipped", "delivered", "completed"].includes(status)) {
     return {
-      label: status.replace("-", " "),
+      label,
       className:
         "k85d4 o8oua inline-flex items-center i220p m859b at2zb qn8tw k73c1 nj29a dark:bg-green-500/10 dark:text-green-500",
       icon: '<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path>',
@@ -81,7 +82,7 @@ function statusMeta(rawStatus) {
 
   if (["failed", "canceled", "cancelled", "refunded"].includes(status)) {
     return {
-      label: status.replace("-", " "),
+      label,
       className:
         "k85d4 o8oua inline-flex items-center i220p m859b at2zb olwac oz3g9 nj29a dark:bg-red-500/10 dark:text-red-500",
       icon: '<circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path>',
@@ -89,7 +90,7 @@ function statusMeta(rawStatus) {
   }
 
   return {
-    label: status.replace("-", " "),
+    label,
     className:
       "k85d4 o8oua inline-flex items-center i220p m859b at2zb nck10 h3ns9 nj29a",
     icon: '<path d="M12 2v6"></path><path d="M12 18v4"></path><path d="M4.93 4.93l4.24 4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="M2 12h6"></path><path d="M16 12h6"></path><path d="m4.93 19.07 4.24-4.24"></path><path d="m14.83 9.17 4.24-4.24"></path>',
@@ -149,9 +150,19 @@ function getPaymentStatusLabel(order) {
   const explicitStatus =
     order?.payment_status ||
     order?.paymentStatus ||
-    order?.payment?.status;
+    order?.payment?.status ||
+    order?.status;
 
-  return explicitStatus ? titleCase(explicitStatus) : "-";
+  return explicitStatus ? titleCase(explicitStatus) : "Pending";
+}
+
+function getPhoneNumberLabel(order, customer) {
+  return (
+    order?.shipping_address?.phone ||
+    customer?.phone ||
+    order?.phone ||
+    "-"
+  );
 }
 
 function getPaymentMethodLabel(order) {
@@ -199,12 +210,26 @@ function getCustomerName(order, customer) {
     customer.name ||
     customer.full_name ||
     [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim() ||
-    "-"
+    order.shipping_address?.phone ||
+    customer.phone ||
+    order.email ||
+    order.shipping_address?.email ||
+    customer.email ||
+    "Guest customer"
   );
 }
 
 function getCustomerSubtext(order, customer) {
-  return order.customerSubtext || customer.email || customer.phone || "-";
+  const value =
+    order.customerSubtext ||
+    order.email ||
+    order.shipping_address?.email ||
+    customer.email ||
+    customer.phone ||
+    order.shipping_address?.phone ||
+    "";
+  const name = getCustomerName(order, customer);
+  return value && value !== name ? value : "Guest order";
 }
 
 function buildOrderView(order, customerMap, itemCountMap) {
@@ -221,7 +246,7 @@ function buildOrderView(order, customerMap, itemCountMap) {
     customerName: getCustomerName(order, customer),
     customerSubtext: getCustomerSubtext(order, customer),
     paymentMethodLabel: getPaymentMethodLabel(order),
-    paymentStatusLabel: getPaymentStatusLabel(order),
+    phoneNumberLabel: getPhoneNumberLabel(order, customer),
     itemCount:
       itemCountMap.get(order.id) ??
       (Array.isArray(order.items) ? order.items.length : 0),
@@ -262,7 +287,7 @@ function buildOrderRow(view) {
         <span class="yymkp mnod2">${escapeHtml(view.paymentMethodLabel)}</span>
       </td>
       <td class="gmilb offh6 cti9j dg39k">
-        <span class="yymkp mnod2">${escapeHtml(view.paymentStatusLabel)}</span>
+        <span class="yymkp mnod2">${escapeHtml(view.phoneNumberLabel)}</span>
       </td>
       <td class="gmilb offh6 cti9j dg39k qk13w">
         <span class="yymkp mnod2">${escapeHtml(String(view.itemCount))}</span>

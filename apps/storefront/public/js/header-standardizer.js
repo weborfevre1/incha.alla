@@ -2850,22 +2850,19 @@
 
       const numberInput = document.getElementById("hs-pro-shtofon");
       const emailInput = document.getElementById("hs-pro-shtofem");
-      const zipInput = document.getElementById("hs-pro-shtofsz");
       const lookupValue = numberInput ? numberInput.value.trim() : "";
       const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
-      const zipCode = zipInput ? zipInput.value.trim() : "";
       const container = submitLink.closest(".space-y-4") || submitLink.parentElement;
 
-      if (!lookupValue || !email || !zipCode) {
-        showMessage(container, "data-order-lookup-message", "Order number, email, and shipping zip code are required.", "error");
+      if (!lookupValue || !email) {
+        showMessage(container, "data-order-lookup-message", "Order number and email are required.", "error");
         return;
       }
 
       let order = getStoredOrders().find(function (entry) {
         const displayOrderNumber = String(entry.displayOrderNumber || entry.id || "").toLowerCase();
         const orderEmail = String(entry.email || entry.shipping_address && entry.shipping_address.email || "").toLowerCase();
-        const orderZip = String(entry.shipping_address && entry.shipping_address.postal_code || "").trim();
-        return displayOrderNumber === lookupValue.toLowerCase() && orderEmail === email && orderZip === zipCode;
+        return displayOrderNumber === lookupValue.toLowerCase() && orderEmail === email;
       });
 
       if (!order && /^[0-9a-f-]{20,}$/i.test(lookupValue)) {
