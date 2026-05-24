@@ -8,9 +8,15 @@ import {
   getOrderItemUnitPrice,
   getOrderTotal,
   fetchSanityProductsByIds,
+  updateOrderStatus,
 } from "@siggistore/services/admin";
 
 const STOREFRONT_LATEST_ORDER_KEY = "appLatestOrder";
+const STOREFRONT_ORDERS_KEY = "appOrders";
+const STOREFRONT_LOOKUP_ORDER_KEY = "appLookupOrder";
+const TRACKER_STATUSES = ["pending", "shipped", "delivered"];
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -84,7 +90,6 @@ function paymentBadgeMeta(order) {
     order?.payment_status ||
     order?.paymentStatus ||
     order?.payment?.status ||
-    order?.status ||
     "pending";
   const label = titleCase(raw);
   const normalized = String(raw).toLowerCase();
@@ -368,6 +373,180 @@ function setHtml(id, value) {
   if (node) node.innerHTML = value;
 }
 
+function normalizeTrackerStatus(status) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+  if (normalized === "delivered" || normalized === "completed") return "delivered";
+  if (normalized === "shipped") return "shipped";
+  return "pending";
+}
+
+function isSupabaseOrderId(orderId) {
+  return UUID_PATTERN.test(String(orderId ?? "").trim());
+}
+
+function setStatusFeedback(message, tone = "muted") {
+  const node = document.getElementById("admin-order-details-status-feedback");
+  if (!node) return;
+
+  node.textContent = message;
+  node.className = "m859b f1ztf";
+
+  if (tone === "success") {
+    node.classList.add("k73c1");
+    return;
+  }
+
+  if (tone === "error") {
+    node.classList.add("oz3g9");
+    return;
+  }
+
+  node.classList.add("c4t4j");
+}
+
+function syncStorefrontLatestOrder(order) {
+  try {
+    const raw = window.localStorage.getItem(STOREFRONT_LATEST_ORDER_KEY);
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.id !== order.id) return;
+
+    window.localStorage.setItem(
+      STOREFRONT_LATEST_ORDER_KEY,
+      JSON.stringify({
+        ...parsed,
+        ...order,
+      }),
+    );
+  } catch (error) {
+    console.warn("Unable to sync latest storefront order bridge.", error);
+  }
+}
+
+function readSharedOrders() {
+  try {
+    const raw = window.localStorage.getItem(STOREFRONT_ORDERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Unable to read shared order history.", error);
+    return [];
+  }
+}
+
+function sortOrdersByNewest(orders) {
+  return [...orders].sort((left, right) => {
+    const leftTime = new Date(left?.created_at || 0).getTime() || 0;
+    const rightTime = new Date(right?.created_at || 0).getTime() || 0;
+    return rightTime - leftTime;
+  });
+}
+
+function syncSharedOrderHistory(order) {
+  try {
+    const orders = readSharedOrders();
+    const nextOrders = sortOrdersByNewest([
+      order,
+      ...orders.filter((entry) => entry?.id !== order.id),
+    ]);
+    window.localStorage.setItem(STOREFRONT_ORDERS_KEY, JSON.stringify(nextOrders));
+
+    const lookupRaw = window.localStorage.getItem(STOREFRONT_LOOKUP_ORDER_KEY);
+    if (lookupRaw) {
+      const lookupOrder = JSON.parse(lookupRaw);
+      if (lookupOrder?.id === order.id) {
+        window.localStorage.setItem(
+          STOREFRONT_LOOKUP_ORDER_KEY,
+          JSON.stringify({
+            ...lookupOrder,
+            ...order,
+          }),
+        );
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to sync shared order history.", error);
+  }
+}
+
+function bindStatusControls(order) {
+  const select = document.getElementById("admin-order-details-status-select");
+  const saveButton = document.getElementById("admin-order-details-status-save");
+
+  if (!select || !saveButton) return;
+
+  const syncSelect = () => {
+    select.value = normalizeTrackerStatus(order.status);
+  };
+
+  syncSelect();
+  if (!isSupabaseOrderId(order?.id)) {
+    select.disabled = false;
+    saveButton.disabled = false;
+    setStatusFeedback("This order will be saved to shared order history for the storefront view.");
+  } else {
+    select.disabled = false;
+    saveButton.disabled = false;
+    setStatusFeedback("Sync order progress to the storefront tracker via Supabase.");
+  }
+  saveButton.onclick = async () => {
+    const nextStatus = normalizeTrackerStatus(select.value);
+    const currentStatus = normalizeTrackerStatus(order.status);
+
+    if (!TRACKER_STATUSES.includes(nextStatus)) {
+      setStatusFeedback("Choose a valid status before saving.", "error");
+      syncSelect();
+      return;
+    }
+
+    if (nextStatus === currentStatus) {
+      setStatusFeedback("This order is already using that storefront status.", "muted");
+      return;
+    }
+
+    const originalLabel = saveButton.textContent;
+    saveButton.disabled = true;
+    select.disabled = true;
+    saveButton.textContent = "Saving...";
+    setStatusFeedback("Saving order progress to Supabase...");
+
+    try {
+      let updatedOrder;
+      if (isSupabaseOrderId(order.id)) {
+        updatedOrder = await updateOrderStatus(order.id, nextStatus);
+      } else {
+        updatedOrder = {
+          ...order,
+          status: nextStatus,
+          updated_at: new Date().toISOString(),
+        };
+      }
+      Object.assign(order, updatedOrder);
+      syncSelect();
+      syncStorefrontLatestOrder(order);
+      syncSharedOrderHistory(order);
+      setStatusFeedback(
+        isSupabaseOrderId(order.id)
+          ? "Order progress saved. The storefront tracker will read it from shared history and Supabase."
+          : "Order progress saved to shared order history for the storefront.",
+        "success",
+      );
+    } catch (error) {
+      console.error("Failed to update order status", error);
+      syncSelect();
+      setStatusFeedback(
+        error?.message || "Unable to save order progress right now.",
+        "error",
+      );
+    } finally {
+      saveButton.disabled = false;
+      select.disabled = false;
+      saveButton.textContent = originalLabel;
+    }
+  };
+}
+
 function readStorefrontLatestOrder(orderId) {
   try {
     const raw = window.localStorage.getItem(STOREFRONT_LATEST_ORDER_KEY);
@@ -437,10 +616,6 @@ async function initOrderDetailsPage() {
         .forEach((key) => productMap.set(String(key), product));
     });
     const shippingAddress = order.shipping_address || order.shippingAddress || {};
-    const billingAddress = order.billing_address || order.billingAddress || shippingAddress;
-    const paymentMethod = inferPaymentMethod(order);
-    const paymentMeta = paymentBadgeMeta(order);
-    const fulfillmentMeta = fulfillmentBadgeMeta(order);
     const orderLabel = getOrderDisplayNumber(order, orderId);
     const customerName =
       customer?.name ||
@@ -463,8 +638,7 @@ async function initOrderDetailsPage() {
 
     setText("admin-order-details-title", `Order ${orderLabel}`);
     setText("admin-order-details-meta", `Order placed: ${formatDateTimeLabel(order.created_at)}`);
-    setBadge(document.getElementById("admin-order-details-payment-badge"), paymentMeta);
-    setBadge(document.getElementById("admin-order-details-fulfillment-badge"), fulfillmentMeta);
+    bindStatusControls(order);
     setHtml(
       "admin-order-details-items",
       items.length
@@ -490,9 +664,6 @@ async function initOrderDetailsPage() {
     setText("admin-order-details-customer-email", customerEmail);
     setText("admin-order-details-customer-phone", customerPhone);
     setHtml("admin-order-details-shipping-address", formatAddressHtml(shippingAddress));
-    setHtml("admin-order-details-billing-address", formatAddressHtml(billingAddress));
-    setText("admin-order-details-payment-method", paymentMethod.label);
-    setText("admin-order-details-payment-card", paymentMethod.cardLabel);
     setHtml("admin-order-details-timeline", buildTimelineMarkup(order, orderLabel));
     document.title = `${orderLabel} | Order Details`;
 

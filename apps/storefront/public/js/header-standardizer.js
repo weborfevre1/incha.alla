@@ -388,8 +388,35 @@
     return readJsonStorage(ordersKey, []);
   }
 
+  function sortOrdersByNewest(orders) {
+    return (Array.isArray(orders) ? orders : []).slice().sort(function (left, right) {
+      var leftTime = new Date(left && left.created_at || 0).getTime() || 0;
+      var rightTime = new Date(right && right.created_at || 0).getTime() || 0;
+      return rightTime - leftTime;
+    });
+  }
+
   function saveStoredOrders(orders) {
-    writeJsonStorage(ordersKey, orders);
+    writeJsonStorage(ordersKey, sortOrdersByNewest(orders));
+  }
+
+  function mergeOrdersById(existingOrders, incomingOrders) {
+    var merged = new Map();
+
+    (Array.isArray(existingOrders) ? existingOrders : []).forEach(function (order) {
+      if (order && order.id) merged.set(order.id, order);
+    });
+
+    (Array.isArray(incomingOrders) ? incomingOrders : []).forEach(function (order) {
+      if (!order || !order.id) return;
+      var current = merged.get(order.id) || {};
+      merged.set(order.id, {
+        ...current,
+        ...order,
+      });
+    });
+
+    return sortOrdersByNewest(Array.from(merged.values()));
   }
 
   function buildDisplayOrderNumber() {
@@ -2227,14 +2254,177 @@
   }
 
   function getLatestOrderStatusLabel(order) {
-    const rawStatus = String(order && (order.status || order.fulfillment_status) || "").trim();
-    if (!rawStatus) return "Preparing order";
+    const normalizedStatus = normalizeLatestOrderTrackerStatus(order);
+    if (normalizedStatus === "delivered") return "Delivered";
+    if (normalizedStatus === "shipped") return "Shipped";
+    return "Pending";
+  }
 
-    return rawStatus
-      .replace(/[_-]+/g, " ")
-      .replace(/\b\w/g, function (char) {
-        return char.toUpperCase();
+  function normalizeLatestOrderTrackerStatus(order) {
+    const rawStatus = String(order && (order.status || order.fulfillment_status) || "").trim().toLowerCase();
+    if (rawStatus === "delivered" || rawStatus === "completed") return "delivered";
+    if (rawStatus === "shipped") return "shipped";
+    return "pending";
+  }
+
+  function getNextLatestOrderTrackerStatus(currentStatus) {
+    if (currentStatus === "pending") return "Shipped";
+    if (currentStatus === "shipped") return "Delivered";
+    return "";
+  }
+
+  function getTrackerStepState(step, currentStatus) {
+    var orderedSteps = ["placed", "pending", "shipped", "delivered"];
+    var currentIndex = orderedSteps.indexOf(currentStatus);
+    var stepIndex = orderedSteps.indexOf(step);
+
+    if (stepIndex === -1) return "upcoming";
+    if (currentIndex === -1) currentIndex = 1;
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "current";
+    return "upcoming";
+  }
+
+  function buildCompletedTrackerMarkup(label) {
+    return [
+      '<svg class="y6rh0 x215h" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+      '<path d="M20 6 9 17l-5-5"></path>',
+      "</svg>",
+      label,
+    ].join("");
+  }
+
+  function buildCurrentTrackerMarkup(label) {
+    return [
+      '<span class="relative flex">',
+      '<span class="ykapz absolute inline-flex e9n2b nj29a si0ce e4zvp dark:bg-primary-600"></span>',
+      '<span class="relative inline-flex nj29a n6fqq pikqk"></span>',
+      '<span class="rfrdb">Current</span>',
+      "</span>",
+      '<span data-latest-order-current-status="true">' + label + "</span>",
+    ].join("");
+  }
+
+  function buildUpcomingTrackerMarkup(label) {
+    return label;
+  }
+
+  function buildTrackerStepMarkup(step, state, label) {
+    if (state === "completed") {
+      return {
+        className: "hidden md:flex items-center i220p wgwtz yymkp c4t4j",
+        innerHTML: buildCompletedTrackerMarkup(label),
+      };
+    }
+
+    if (state === "current") {
+      return {
+        className: "hidden md:flex items-center i220p wgwtz yymkp s7mjk",
+        innerHTML: buildCurrentTrackerMarkup(label),
+      };
+    }
+
+    return {
+      className: "hidden md:block my57n wgwtz yymkp c4t4j",
+      innerHTML: buildUpcomingTrackerMarkup(label),
+    };
+  }
+
+  function applyTrackerStepNode(node, step, currentStatus, labels) {
+    if (!node) return;
+    var state = getTrackerStepState(step, currentStatus);
+    var nextMarkup = buildTrackerStepMarkup(step, state, labels[step]);
+    node.className = nextMarkup.className;
+    node.innerHTML = nextMarkup.innerHTML;
+  }
+
+  function applyOrderTracker(root, order) {
+    if (!root) return;
+
+    const trackerRoots = root.matches && root.matches("[data-order-tracker='true']")
+      ? [root]
+      : Array.from(root.querySelectorAll("[data-order-tracker='true']"));
+    if (!trackerRoots.length) return;
+
+    const currentStatus = normalizeLatestOrderTrackerStatus(order);
+    const nextStatus = getNextLatestOrderTrackerStatus(currentStatus);
+    const labels = {
+      placed: "Order placed",
+      pending: "Pending",
+      shipped: "Shipped",
+      delivered: "Delivered",
+    };
+    const progressState = {
+      placed: getTrackerStepState("placed", currentStatus),
+      pending: getTrackerStepState("pending", currentStatus),
+      shipped: getTrackerStepState("shipped", currentStatus),
+      delivered: getTrackerStepState("delivered", currentStatus),
+    };
+
+    trackerRoots.forEach(function (trackerRoot) {
+      var mobileCurrent = trackerRoot.querySelector("[data-order-tracker-mobile-current='true']");
+      if (mobileCurrent) {
+        mobileCurrent.innerHTML = buildCurrentTrackerMarkup(labels[currentStatus]);
+      }
+
+      var mobileNext = trackerRoot.querySelector("[data-order-tracker-mobile-next='true']");
+      if (mobileNext) {
+        if (nextStatus) {
+          mobileNext.style.display = "";
+          mobileNext.innerHTML = [
+            '<span class="at2zb">' + nextStatus + "</span>",
+            "<span>",
+            '<svg class="y6rh0 x215h" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+            '<circle cx="12" cy="12" r="10"></circle>',
+            '<path d="M8 12h8"></path>',
+            '<path d="m12 16 4-4-4-4"></path>',
+            "</svg>",
+            '<span class="rfrdb">Next</span>',
+            "</span>",
+          ].join("");
+        } else {
+          mobileNext.style.display = "none";
+        }
+      }
+
+      applyTrackerStepNode(
+        trackerRoot.querySelector('[data-order-tracker-step="placed"]'),
+        "placed",
+        currentStatus,
+        labels,
+      );
+      applyTrackerStepNode(
+        trackerRoot.querySelector('[data-order-tracker-step="pending"]'),
+        "pending",
+        currentStatus,
+        labels,
+      );
+      applyTrackerStepNode(
+        trackerRoot.querySelector('[data-order-tracker-step="shipped"]'),
+        "shipped",
+        currentStatus,
+        labels,
+      );
+      applyTrackerStepNode(
+        trackerRoot.querySelector('[data-order-tracker-step="delivered"]'),
+        "delivered",
+        currentStatus,
+        labels,
+      );
+
+      trackerRoot.querySelectorAll("[data-order-tracker-progress]").forEach(function (node) {
+        var step = node.getAttribute("data-order-tracker-progress");
+        var stepState = progressState[step];
+        if (!stepState) return;
+
+        var isActive = stepState === "completed" || stepState === "current";
+        node.style.width = isActive ? "100%" : "0%";
+        node.parentElement && node.parentElement.setAttribute("aria-valuenow", isActive ? "100" : "0");
+        node.className = isActive
+          ? "flex flex-col lp3ls ftf66 overflow-hidden z0w76 m859b cncwr rm4xc offh6 a38gk uglyd"
+          : "flex flex-col lp3ls ftf66 overflow-hidden pm6ks m859b cncwr rm4xc offh6 a38gk uglyd";
       });
+    });
   }
 
   function renderLatestOrderItems(root, order) {
@@ -2490,9 +2680,10 @@
         }, getPersistedReviewSnapshot());
       });
 
-      saveStoredOrders(normalizedOrders);
-      writeJsonStorage(latestOrderKey, normalizedOrders[0]);
-      return normalizedOrders[0];
+      var mergedOrders = mergeOrdersById(getStoredOrders(), normalizedOrders);
+      saveStoredOrders(mergedOrders);
+      writeJsonStorage(latestOrderKey, mergedOrders[0]);
+      return mergedOrders[0];
     } catch (error) {
       console.warn("Unable to load latest Supabase order for My Orders page.", error);
       return null;
@@ -2534,9 +2725,7 @@
     root.querySelectorAll("[data-latest-order-address='true']").forEach(function (node) {
       node.textContent = addressLabel || "";
     });
-    root.querySelectorAll("[data-latest-order-current-status='true']").forEach(function (node) {
-      node.textContent = statusLabel;
-    });
+    applyOrderTracker(root, order);
 
     root.querySelectorAll('a[href="./Order Details.html"]').forEach(function (link) {
       if (order && order.id) {
@@ -2807,6 +2996,7 @@
     document.querySelectorAll("[data-order-details-delivery='true']").forEach(function (node) {
       node.textContent = getEstimatedDeliveryLabel(source);
     });
+    applyOrderTracker(document, source);
     renderOrderSummaryValues(buildOrderSummaryPricing(source));
   }
 

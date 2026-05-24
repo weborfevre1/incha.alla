@@ -507,15 +507,23 @@
                     <p id="admin-order-details-meta" class="yymkp c4t4j">
                       Order placed: 17 Aug, 2023, 5:48 am
                     </p>
-                    <div class="inline-flex items-center my9gz">
-                      <span id="admin-order-details-payment-badge" class="dg39k o8oua inline-flex items-center i220p m859b at2zb qn8tw k73c1 nj29a dark:bg-green-500/10 dark:text-green-500">
-                        Paid
-                      </span>
-                      <span id="admin-order-details-fulfillment-badge" class="dg39k o8oua inline-flex items-center i220p m859b at2zb axv3m ssl0y nj29a dark:bg-yellow-500/10 dark:text-yellow-500">
-                        Unfulfilled
-                      </span>
+                    <div class="flex flex-wrap items-center my9gz g86xu">
+                      <label for="admin-order-details-status-select" class="yymkp f1ztf c4t4j">
+                        Progress
+                      </label>
+                      <select id="admin-order-details-status-select" class="k85d4 utq7k etx3p txx3a block s6i1l ijai8 mpja4 rbu8c c4t4j gzwp4 focus:outline-hidden jw8en disabled:opacity-50 disabled:pointer-events-none">
+                        <option value="pending">Pending</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                      </select>
+                      <button id="admin-order-details-status-save" type="button" class="abuy9 zqj33 inline-flex items-center i220p m859b at2zb y9dku z0w76 mak94 dzdw5 cncwr wqd6j disabled:opacity-50 disabled:pointer-events-none focus:outline-hidden ajd3x v02ii jobdj">
+                        Save status
+                      </button>
                     </div>
                   </div>
+                  <p id="admin-order-details-status-feedback" class="m859b f1ztf">
+                    Sync order progress to the storefront tracker via Supabase.
+                  </p>
                   <!-- End Item -->
 
                   <!-- Item -->
@@ -984,42 +992,6 @@
                     </div>
                     <!-- End List -->
 
-                    <!-- List -->
-                    <div class="p0vwr fkl1d r4caq mjfwa azhag phna0 a70al">
-                      <div class="wgwtz flex g86xu items-center h7z6o">
-                        <h4 class="ctc9x yymkp c4t4j">
-                          Billing address
-                        </h4>
-                        <a class="yymkp s7mjk qiza1 lpc02 at2zb focus:outline-hidden jnkmc" href="#">
-                          Edit
-                        </a>
-                      </div>
-
-                      <address id="admin-order-details-billing-address" class="yymkp kc6nc mnod2">
-                        45 Roker Terrace<br>
-                        Latheronwheel<br>
-                        KW5 8NW, London, UK
-                      </address>
-
-                      <div class="ljp3z wgwtz flex g86xu items-center h7z6o">
-                        <h4 id="admin-order-details-payment-method" class="ctc9x yymkp c4t4j">
-                          Mastercard
-                        </h4>
-                      </div>
-
-                      <span id="admin-order-details-payment-card" class="inline-flex items-center jdzig yymkp mnod2">
-                        <svg class="y6rh0 x215h" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <line x1="3" x2="21" y1="22" y2="22" />
-                          <line x1="6" x2="6" y1="18" y2="11" />
-                          <line x1="10" x2="10" y1="18" y2="11" />
-                          <line x1="14" x2="14" y1="18" y2="11" />
-                          <line x1="18" x2="18" y1="18" y2="11" />
-                          <polygon points="12 2 20 7 4 7" />
-                        </svg>
-                        Card&nbsp;Number: ************ 7887
-                      </span>
-                    </div>
-                    <!-- End List -->
                   </div>
                   <!-- End Body -->
                 </div>

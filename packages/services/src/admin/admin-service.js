@@ -325,19 +325,27 @@ export async function fetchOrderItemsByOrderIds(orderIds = []) {
 }
 
 export async function updateOrderStatus(orderId, status) {
+  const updatedAt = new Date().toISOString()
   const { data, error } = await supabase
     .from('orders')
     .update({
       status,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     })
     .eq('id', orderId)
-    .select('*')
-    .single()
+    .select('id')
+    .maybeSingle()
 
   if (error) throw error
+  if (!data?.id) {
+    throw new Error(`Order ${orderId} was not found in Supabase.`)
+  }
 
-  return normalizeOrder(data)
+  return normalizeOrder({
+    id: orderId,
+    status,
+    updated_at: updatedAt,
+  })
 }
 
 export async function deleteOrder(orderId) {

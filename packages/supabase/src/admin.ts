@@ -223,14 +223,22 @@ export async function fetchOrderById(orderId: string) {
 }
 
 export async function updateOrderStatus(orderId: string, status: string) {
+  const updatedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from('orders')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status, updated_at: updatedAt })
     .eq('id', orderId)
-    .select('*')
-    .single();
+    .select('id')
+    .maybeSingle();
   if (error) throw error;
-  return normalizeOrder(data);
+  if (!data?.id) {
+    throw new Error(`Order ${orderId} was not found in Supabase.`);
+  }
+  return normalizeOrder({
+    id: orderId,
+    status,
+    updated_at: updatedAt,
+  });
 }
 
 export async function deleteOrder(orderId: string) {
