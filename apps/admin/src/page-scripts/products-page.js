@@ -260,7 +260,9 @@ async function initProductsPage() {
               : footer,
           count:
             tabKey === "all"
-              ? document.getElementById("products-results-count")
+              ? document.getElementById("products-results-count") ||
+                document.getElementById("products-resultats-count") ||
+                document.querySelector("#products-table-footer p .at2zb")
               : footer?.querySelector("p .at2zb"),
           previousButton:
             tabKey === "all"
