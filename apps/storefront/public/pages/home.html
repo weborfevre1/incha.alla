@@ -719,7 +719,16 @@
   </header>
 <div class="ei6q1 w-full max-w-[85rem] cti9j gwqpr c4mnv mx-auto">
 <div class="ihunb cj2nq fmdj9 relative">
-<img alt="Hero Image" class="absolute inset-0 e9n2b fy2yn ictpa" src="https://images.unsplash.com/photo-1471602514494-6b059b461fa0?q=80&amp;w=1000&amp;auto=format&amp;fit=crop&amp;ixlib=rb-4.0.3&amp;ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"/>
+                    <img alt="Hero Image" class="absolute inset-0 e9n2b fy2yn ictpa" data-hero-poster src="/images/heroshop.png"/>
+                    <div class="absolute inset-0 z-10 flex items-center justify-center bg-black/20 transition hover:bg-black/30" data-hero-play role="presentation">
+                      <span class="flex h-20 w-20 items-center justify-center rounded-full bg-white/92 shadow-lg">
+                        <span style="margin-left:6px; width:0; height:0; border-top:14px solid transparent; border-bottom:14px solid transparent; border-left:22px solid #111827;"></span>
+                      </span>
+                    </div>
+                    <div class="absolute inset-0 e9n2b fy2yn ictpa overflow-hidden bg-black/35" data-hero-video aria-hidden="true" hidden>
+                      <iframe class="absolute pointer-events-none" data-hero-video-frame data-src="https://www.youtube.com/embed/ceAkllddPBk?autoplay=1&amp;mute=1&amp;controls=1&amp;loop=1&amp;playlist=ceAkllddPBk&amp;modestbranding=1&amp;playsinline=1&amp;rel=0" style="border:0;" title="Hero Video" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                      <div class="absolute inset-0 bg-black/20"></div>
+                    </div>
 <div class="relative nnhrf e9n2b b70oy mx-auto flex flex-col lp3ls items-center">
 <p class="yymkp k80uv knnc2 no74a" data-storefront-hero-eyebrow>
                       Summer sale
@@ -742,6 +751,63 @@
 </div>
 </div>
 </div>
+<script>
+  (() => {
+    const HERO_VIDEO_ASPECT = 16 / 9;
+    const wrappers = document.querySelectorAll("[data-hero-video]");
+
+    const fitHeroVideo = (wrapper) => {
+      const frame = wrapper.querySelector("[data-hero-video-frame]");
+      if (!frame) return;
+
+      const { width, height } = wrapper.getBoundingClientRect();
+      if (!width || !height) return;
+
+      const boxAspect = width / height;
+      let frameWidth = width;
+      let frameHeight = height;
+
+      if (boxAspect > HERO_VIDEO_ASPECT) {
+        frameHeight = width / HERO_VIDEO_ASPECT;
+      } else {
+        frameWidth = height * HERO_VIDEO_ASPECT;
+      }
+
+      frame.style.width = `${frameWidth}px`;
+      frame.style.height = `${frameHeight}px`;
+      frame.style.left = `${(width - frameWidth) / 2}px`;
+      frame.style.top = `${(height - frameHeight) / 2}px`;
+    };
+
+    const syncAll = () => wrappers.forEach(fitHeroVideo);
+
+    syncAll();
+    window.addEventListener("resize", syncAll);
+
+    wrappers.forEach((wrapper) => {
+      const frame = wrapper.querySelector("[data-hero-video-frame]");
+      if (!frame) return;
+      const container = wrapper.closest(".ihunb");
+      const playOverlay = container?.querySelector("[data-hero-play]");
+      const poster = container?.querySelector("[data-hero-poster]");
+      if (!playOverlay || !poster) return;
+
+      const startVideo = () => {
+        if (!frame.src) {
+          frame.src = frame.dataset.src || "";
+        }
+        wrapper.hidden = false;
+        wrapper.setAttribute("aria-hidden", "false");
+        fitHeroVideo(wrapper);
+        playOverlay.hidden = true;
+        poster.hidden = true;
+      };
+
+      container.addEventListener("mouseenter", startVideo, { once: true });
+      container.addEventListener("focusin", startVideo, { once: true });
+    });
+  })();
+</script>
 <main id="content">
 <div class="szi1h u3wpp w-full max-w-[85rem] cti9j gwqpr c4mnv mx-auto">
 <!-- Header -->

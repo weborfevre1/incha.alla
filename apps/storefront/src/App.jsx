@@ -446,6 +446,72 @@ function initializeStorefrontRuntimeState() {
   }
 }
 
+function initializeHeroHoverVideos(root = document) {
+  const HERO_VIDEO_ASPECT = 16 / 9;
+  const wrappers = root.querySelectorAll("[data-hero-video]");
+
+  const fitHeroVideo = (wrapper) => {
+    const frame = wrapper.querySelector("[data-hero-video-frame]");
+    if (!frame) return;
+
+    const { width, height } = wrapper.getBoundingClientRect();
+    if (!width || !height) return;
+
+    const boxAspect = width / height;
+    let frameWidth = width;
+    let frameHeight = height;
+
+    if (boxAspect > HERO_VIDEO_ASPECT) {
+      frameHeight = width / HERO_VIDEO_ASPECT;
+    } else {
+      frameWidth = height * HERO_VIDEO_ASPECT;
+    }
+
+    frame.style.width = `${frameWidth}px`;
+    frame.style.height = `${frameHeight}px`;
+    frame.style.left = `${(width - frameWidth) / 2}px`;
+    frame.style.top = `${(height - frameHeight) / 2}px`;
+  };
+
+  wrappers.forEach((wrapper) => {
+    const frame = wrapper.querySelector("[data-hero-video-frame]");
+    const container = wrapper.closest(".ihunb");
+    const playOverlay = container?.querySelector("[data-hero-play]");
+    const poster = container?.querySelector("[data-hero-poster]");
+
+    if (!frame || !container || !playOverlay || !poster) return;
+    if (container.dataset.heroVideoBound === "true") return;
+
+    container.dataset.heroVideoBound = "true";
+
+    const startVideo = () => {
+      if (!frame.src) {
+        frame.src = frame.dataset.src || "";
+      }
+
+      wrapper.hidden = false;
+      wrapper.setAttribute("aria-hidden", "false");
+      fitHeroVideo(wrapper);
+      playOverlay.hidden = true;
+      poster.hidden = true;
+    };
+
+    container.addEventListener("pointerenter", startVideo, { once: true });
+    container.addEventListener("mouseenter", startVideo, { once: true });
+    container.addEventListener("focusin", startVideo, { once: true });
+  });
+
+  const syncAll = () => wrappers.forEach(fitHeroVideo);
+  syncAll();
+
+  if (!window.__storefrontHeroVideoResizeBound) {
+    window.__storefrontHeroVideoResizeBound = "true";
+    window.addEventListener("resize", () => {
+      document.querySelectorAll("[data-hero-video]").forEach(fitHeroVideo);
+    });
+  }
+}
+
 export default function App() {
   const [markup, setMarkup] = useState("");
   const [error, setError] = useState("");
@@ -481,6 +547,7 @@ export default function App() {
         initializePageBehaviors();
         initializeAuthAndNavbar();
         initializeStorefrontRuntimeState();
+        initializeHeroHoverVideos(shellRef.current);
       })
       .catch((scriptError) => setError(scriptError.message));
 
