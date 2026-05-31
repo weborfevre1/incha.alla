@@ -1,4 +1,4 @@
-import { fetchDiscounts } from "@siggistore/services/admin";
+import { fetchDiscounts } from "@siggistore/services/storefront";
 
 export const CART_KEY = "appCartItems";
 export const FAVORITES_KEY = "appFavorites";
@@ -641,7 +641,7 @@ export function updateCartSummaryUI(root = document) {
     }
 
     if (/Shipping/i.test(labelText) || /Estimated Tax/i.test(labelText) || /^Tax$/i.test(labelText) || /Promo code/i.test(labelText) || /^Promo$/i.test(labelText) || /Sale/i.test(labelText) || /Discount/i.test(labelText)) {
-      valueNode.textContent = "$0";
+      valueNode.textContent = "0 FCFA";
     }
   });
 

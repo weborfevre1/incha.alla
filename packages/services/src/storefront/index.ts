@@ -16,3 +16,4 @@ export {
   supabaseReviewService,
 } from './supabase-service';
 export { default as sanityService } from './sanity-service';
+export { fetchDiscounts } from './supabase-service';

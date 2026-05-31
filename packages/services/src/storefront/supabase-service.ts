@@ -346,6 +346,37 @@ export const supabaseDiscountService = {
   },
 };
 
+export async function fetchDiscounts(options: any = {}) {
+  const { limit, status, query: search } = options;
+
+  let request = supabase
+    .from('discounts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (status && status !== 'all') {
+    request = request.eq('status', status);
+  }
+
+  if (search) {
+    request = request.or(`code.ilike.%${search}%,type.ilike.%${search}%`);
+  }
+
+  if (typeof limit === 'number' && limit > 0) {
+    request = request.limit(limit);
+  }
+
+  const { data, error } = await request;
+  if (error) {
+    if (isMissingTableError(error, 'discounts')) {
+      return [];
+    }
+    throw error;
+  }
+
+  return data ?? [];
+}
+
 function normalizeReviewRow(row: any) {
   if (!row) return row;
   return {
